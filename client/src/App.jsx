@@ -120,41 +120,55 @@ function Shell() {
   );
 }
 
+function AppRoutes() {
+  const location = useLocation();
+  const forceIntro = new URLSearchParams(location.search).get("intro") === "1";
+
+  // ?intro=1 wins over JWT, sessionStorage, /login, and the * → dashboard catch-all.
+  if (forceIntro) {
+    return <Intro />;
+  }
+
+  return (
+    <Routes>
+      <Route path="/" element={<Intro />} />
+      <Route path="/login" element={<Login />} />
+      <Route
+        element={
+          <Guard>
+            <WorkspaceProvider>
+              <Shell />
+            </WorkspaceProvider>
+          </Guard>
+        }
+      >
+        <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/projects" element={<Projects />} />
+        <Route path="/projects/:id" element={<ProjectLayout />}>
+          <Route index element={<ProjectOverview />} />
+          <Route path="tasks" element={<ProjectTasks />} />
+          <Route path="team" element={<ProjectTeam />} />
+        </Route>
+        <Route path="/tasks/:id" element={<TaskDetail />} />
+        <Route
+          path="/users"
+          element={
+            <Guard adminOnly>
+              <Users />
+            </Guard>
+          }
+        />
+        <Route path="/profile" element={<Profile />} />
+      </Route>
+      <Route path="*" element={<Navigate to="/dashboard" replace />} />
+    </Routes>
+  );
+}
+
 export default function App() {
   return (
     <AuthProvider>
-      <Routes>
-        <Route path="/" element={<Intro />} />
-        <Route path="/login" element={<Login />} />
-        <Route
-          element={
-            <Guard>
-              <WorkspaceProvider>
-                <Shell />
-              </WorkspaceProvider>
-            </Guard>
-          }
-        >
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/projects" element={<Projects />} />
-          <Route path="/projects/:id" element={<ProjectLayout />}>
-            <Route index element={<ProjectOverview />} />
-            <Route path="tasks" element={<ProjectTasks />} />
-            <Route path="team" element={<ProjectTeam />} />
-          </Route>
-          <Route path="/tasks/:id" element={<TaskDetail />} />
-          <Route
-            path="/users"
-            element={
-              <Guard adminOnly>
-                <Users />
-              </Guard>
-            }
-          />
-          <Route path="/profile" element={<Profile />} />
-        </Route>
-        <Route path="*" element={<Navigate to="/dashboard" replace />} />
-      </Routes>
+      <AppRoutes />
     </AuthProvider>
   );
 }

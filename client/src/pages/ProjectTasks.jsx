@@ -2,14 +2,13 @@ import { useEffect, useState } from "react";
 import { Link, useOutletContext } from "react-router-dom";
 import { api } from "../api.js";
 import { canManageProject, useAuth } from "../auth.jsx";
+import DueDateField from "../DueDateField.jsx";
 import {
-  DATE_MAX,
-  DATE_MIN,
   PRIORITY_OPTIONS,
   STATUS_OPTIONS,
+  dueDatePayload,
   formatDueDate,
   priorityLabel,
-  sanitizeDueDate,
   statusLabel,
 } from "../taskDisplay.js";
 import { Avatar } from "../workspace.jsx";
@@ -86,7 +85,7 @@ export default function ProjectTasks() {
           description: form.description,
           status: form.status,
           priority: form.priority,
-          dueDate: form.dueDate || null,
+          dueDate: dueDatePayload(form.dueDate),
           assigneeId: form.assigneeId || null,
           asProjectManager: isAdmin && Boolean(form.assigneeId),
         },
@@ -243,13 +242,7 @@ export default function ProjectTasks() {
             )}
             <label>
               Due date
-              <input
-                type="date"
-                min={DATE_MIN}
-                max={DATE_MAX}
-                value={form.dueDate}
-                onChange={(e) => setField("dueDate", sanitizeDueDate(e.target.value))}
-              />
+              <DueDateField value={form.dueDate} onChange={(next) => setField("dueDate", next)} />
             </label>
             <div className="modal-actions">
               <button className="btn ghost" type="button" onClick={() => setOpen(false)}>

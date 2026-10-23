@@ -7,6 +7,10 @@ import { BrandMark } from "../workspace.jsx";
 const INTRO_KEY = "worknest-intro-seen";
 const INTRO_MS = 2000;
 
+function wantsIntro(search) {
+  return new URLSearchParams(search).get("intro") === "1";
+}
+
 function introAlreadySeen() {
   try {
     return sessionStorage.getItem(INTRO_KEY) === "1";
@@ -26,14 +30,19 @@ function markIntroSeen() {
 export default function Intro() {
   const { user, ready } = useAuth();
   const location = useLocation();
-  const replay = new URLSearchParams(location.search).get("intro") === "1";
-  const [holdDone, setHoldDone] = useState(false);
+  const replay = wantsIntro(location.search);
+  const [holdDone, setHoldDone] = useState(() => {
+    if (replay) return false;
+    return Boolean(getToken()) || introAlreadySeen();
+  });
 
   useEffect(() => {
-    if (getToken()) return undefined;
-    if (!replay && introAlreadySeen()) {
-      setHoldDone(true);
-      return undefined;
+    // ?intro=1 always plays the 2s splash — even if a JWT is already stored.
+    if (!replay) {
+      if (getToken() || introAlreadySeen()) {
+        setHoldDone(true);
+        return undefined;
+      }
     }
     const timer = window.setTimeout(() => {
       markIntroSeen();
@@ -42,21 +51,21 @@ export default function Intro() {
     return () => window.clearTimeout(timer);
   }, [replay]);
 
-  if (ready && user) return <Navigate to="/dashboard" replace />;
-  if (getToken() && !ready) {
-    return <div className="auth-screen auth-loading">Loading…</div>;
-  }
-  if (holdDone || (!replay && introAlreadySeen())) {
-    return <Navigate to="/login" replace />;
+  if (!holdDone) {
+    return (
+      <div className="auth-screen">
+        <div className="splash" role="status" aria-live="polite">
+          <BrandMark large />
+          <h1>WorkNest</h1>
+          <p>BY NeoStats</p>
+        </div>
+      </div>
+    );
   }
 
-  return (
-    <div className="auth-screen">
-      <div className="splash" role="status" aria-live="polite">
-        <BrandMark large />
-        <h1>WorkNest</h1>
-        <p>BY NeoStats</p>
-      </div>
-    </div>
-  );
+  if (!ready) {
+    return <div className="auth-screen auth-loading">Loading…</div>;
+  }
+  if (user) return <Navigate to="/dashboard" replace />;
+  return <Navigate to="/login" replace />;
 }

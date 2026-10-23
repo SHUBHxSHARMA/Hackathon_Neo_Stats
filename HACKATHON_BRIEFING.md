@@ -11,12 +11,40 @@ WorkNest, by NeoStats, is a local collaborative project manager. Four roles shar
 
 ---
 
-## Workspace UI (this step — wait)
+## Due date picker (this step — wait)
+
+Windows Chrome’s native date box showed broken text like **mm/05/yyyy** — only one segment filled. That is not a real date, so create/save often sent nothing.
+
+**What changed**
+- New task and task detail now use a real date control: hidden `input type="date"` whose value is only **YYYY-MM-DD** or blank.
+- Clicking the calendar opens a cream/forest month grid. Clicking a **day always sets the full date** (year + month + day). Clear is allowed (no due date).
+- The API stores that calendar day (or `null`). Lists show a human date like **Oct 15, 2026**, never `mm/05/yyyy` and never an ISO timestamp in the input.
+
+**Where it lives**
+- `client/src/DueDateField.jsx` — calendar UI
+- `client/src/taskDisplay.js` — convert any API value to YYYY-MM-DD
+- `client/src/pages/ProjectTasks.jsx` — New task modal
+- `client/src/pages/TaskDetail.jsx` — edit due date
+- `server/src/lib/serialize.js` — API returns `dueDate` as `YYYY-MM-DD`
+
+**How to demo**
+1. Website relaunch → **Tasks** → **New task**.
+2. Open Due date, pick a day in **2026**. The field should read like `Oct 15, 2026`, not `mm/05/yyyy`.
+3. Create. The table **Due** column shows that human date.
+4. Open the row, change the date, **Save** (still sends `version`).
+
+**Judge line:** “Chrome’s mm/dd/yyyy box was leaving half a date. We bind `type=date` as YYYY-MM-DD and the calendar click writes the whole day. Empty is allowed; the list prints a normal date.”
+
+**Please try New task and task detail due dates. When they look right, say so and we continue.**
+
+---
+
+## Workspace UI (verified chrome — still cream + forest)
 
 Judges will see a **SaaS workspace**, not a sparse landing. Cream + forest green. Yellow **W** on the green mark. No Tessel/Agencee names or photos.
 
 **What changed**
-- **Login** is a split screen (WorkNest, not FlowForge): dark forest-green left panel (yellow W, kicker, headline, honest 403 / 409 card) and a cream **Sign in** form on the right. Demo accounts still use `Password123!`. Splash at `/?intro=1` is unchanged.
+- **Login** is a split screen (WorkNest, not FlowForge): dark forest-green left panel (yellow W, kicker, headline, honest 403 / 409 card) and a cream **Sign in** form on the right. Demo accounts still use `Password123!`. **http://localhost:5173/?intro=1 always plays the 2-second WorkNest splash**, even with a JWT; after it, logged-in users go to dashboard and logged-out users get the split login.
 - **Profile** fills the leftover cream: **My projects** (name, role, link) from `GET /api/projects`, plus **Assigned to me** tasks from each project’s `tasks?assigneeId=`. Empty states still occupy the pane and offer **Go to projects**. Save name/password still works. No vanity stat tiles.
 - Logged-in chrome: compact light **sidebar** (icon + label, forest-green active pill) plus a **top bar** (page title, project search, avatar, log out). Content fills the main pane with a 16px rhythm. No black sidebar. No huge empty cream field.
 - **Dashboard:** project cards only (no metric tiles). Yellow **W** (`#F4C430`) on the green mark.
@@ -426,9 +454,9 @@ Refresh http://localhost:5173 — 2-second splash, then the cream login. Admin i
 
 **Done:** React pages, Express APIs, JWT + bcrypt, Prisma schema, migrate, seed, role 403s, task `version` + 409 UI, comments. Dark-orange landing and black sidebar removed.
 
-**This step:** SaaS workspace chrome (sidebar + top bar), dense pages, yellow W, New task modal with real `priority` + `dueDate`, short motion.
+**This step:** Due date picker writes a full YYYY-MM-DD (or blank). No `mm/05/yyyy`.
 
-**Waiting on you:** Check splash, login, dashboard, projects, Website relaunch, task detail, users, profile. Then say if we should continue.
+**Waiting on you:** Website relaunch → Tasks → New task → pick a 2026 day → create. Then edit due date on the task page.
 
 **Not in this build:** cloud deploy, live WebSockets, file uploads, email.
 

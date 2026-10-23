@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { Navigate, useLocation, useNavigate } from "react-router-dom";
-import { getToken } from "../api.js";
 import { useAuth } from "../auth.jsx";
 import { BrandMark } from "../workspace.jsx";
 
@@ -14,7 +13,7 @@ export default function Login() {
   const [busy, setBusy] = useState(false);
   const replay = new URLSearchParams(location.search).get("intro") === "1";
 
-  if (replay && !getToken()) return <Navigate to="/?intro=1" replace />;
+  if (replay) return <Navigate to="/?intro=1" replace />;
   if (ready && user) return <Navigate to="/dashboard" replace />;
   if (!ready) return <div className="auth-screen auth-loading">Loading…</div>;
 

@@ -40,6 +40,16 @@ export function publicProject(project, extras = {}) {
   };
 }
 
+function publicDateOnly(value) {
+  if (!value) return null;
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  const year = date.getUTCFullYear();
+  const month = String(date.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(date.getUTCDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
 export function publicTask(task) {
   return {
     id: task.id,
@@ -48,7 +58,7 @@ export function publicTask(task) {
     description: task.description,
     status: task.status,
     priority: task.priority,
-    dueDate: task.dueDate,
+    dueDate: publicDateOnly(task.dueDate),
     version: task.version,
     assigneeId: task.assigneeId,
     createdById: task.createdById,

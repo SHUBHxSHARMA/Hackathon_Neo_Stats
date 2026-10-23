@@ -3,15 +3,14 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { api, ApiError } from "../api.js";
 import { canManageProject, canWrite, useAuth } from "../auth.jsx";
 import { Avatar, usePageTitle } from "../workspace.jsx";
+import DueDateField from "../DueDateField.jsx";
 import {
-  DATE_MAX,
-  DATE_MIN,
   PRIORITY_OPTIONS,
   STATUS_OPTIONS,
   dueDateInputValue,
+  dueDatePayload,
   formatDueDate,
   priorityLabel,
-  sanitizeDueDate,
   statusLabel,
 } from "../taskDisplay.js";
 
@@ -80,7 +79,7 @@ export default function TaskDetail() {
         description,
         status,
         priority,
-        dueDate: dueDate || null,
+        dueDate: dueDatePayload(dueDate),
       };
       if (manager) payload.assigneeId = assigneeId || null;
       if (isAdmin && assigneeId) payload.asProjectManager = true;
@@ -214,14 +213,7 @@ export default function TaskDetail() {
           </label>
           <label>
             Due date
-            <input
-              type="date"
-              min={DATE_MIN}
-              max={DATE_MAX}
-              value={dueDate}
-              onChange={(e) => setDueDate(sanitizeDueDate(e.target.value))}
-              disabled={!canEdit}
-            />
+            <DueDateField value={dueDate} onChange={setDueDate} disabled={!canEdit} />
           </label>
           {manager && (
             <label>
