@@ -1,0 +1,7 @@
+node_modules/
+dist/
+.env
+*.log
+.DS_Store
+Hackathon_theneostats/
+hey.txt.txt

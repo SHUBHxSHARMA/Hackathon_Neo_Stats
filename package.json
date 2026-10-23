@@ -1,0 +1,10 @@
+{
+  "name": "worknest",
+  "private": true,
+  "scripts": {
+    "dev": "npm run dev --prefix server & npm run dev --prefix client",
+    "dev:server": "npm run dev --prefix server",
+    "dev:client": "npm run dev --prefix client",
+    "setup": "npm install --prefix server && npm install --prefix client && npm run db:setup --prefix server"
+  }
+}
