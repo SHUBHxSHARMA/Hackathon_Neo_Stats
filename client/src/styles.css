@@ -385,6 +385,7 @@ textarea { min-height: 88px; resize: vertical; }
 
 .login-split {
   min-height: 100vh;
+  height: 100vh;
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   background: var(--paper);
@@ -392,8 +393,9 @@ textarea { min-height: 88px; resize: vertical; }
 .login-hero {
   display: flex;
   flex-direction: column;
+  height: 100vh;
   min-height: 100vh;
-  padding: 36px 48px 28px;
+  padding: 36px 48px;
   color: var(--paper);
   background:
     radial-gradient(900px 520px at 12% -10%, rgba(212, 237, 106, 0.22), transparent 52%),
@@ -404,6 +406,7 @@ textarea { min-height: 88px; resize: vertical; }
 .login-hero-brand {
   display: flex;
   align-items: center;
+  align-self: flex-start;
   gap: 12px;
   color: inherit;
   width: max-content;
@@ -424,12 +427,12 @@ textarea { min-height: 88px; resize: vertical; }
   box-shadow: 0 0 0 2px rgba(243, 240, 232, 0.22);
 }
 .login-hero-copy {
-  flex: 1;
   display: flex;
   flex-direction: column;
   justify-content: center;
-  max-width: 540px;
-  padding: 48px 0 32px;
+  width: min(440px, 100%);
+  max-width: 440px;
+  margin: auto;
 }
 .login-kicker {
   margin: 0 0 14px;
@@ -518,6 +521,7 @@ textarea { min-height: 88px; resize: vertical; }
 }
 .login-hero-foot {
   margin: 0;
+  align-self: flex-start;
   font-size: 13px;
   color: rgba(243, 240, 232, 0.62);
 }
@@ -892,9 +896,9 @@ textarea { min-height: 88px; resize: vertical; }
   .topbar, .workspace { grid-column: 1; }
   .grid.two, .grid.split, .grid.projects, .grid.stats, .profile-work { grid-template-columns: 1fr; }
   .topbar-user .who { display: none; }
-  .login-split { grid-template-columns: 1fr; }
-  .login-hero, .login-panel { min-height: auto; }
+  .login-split { grid-template-columns: 1fr; height: auto; }
+  .login-hero, .login-panel { min-height: auto; height: auto; }
   .login-hero { padding: 28px 24px 24px; }
-  .login-hero-copy { padding: 28px 0 20px; }
+  .login-hero-copy { margin: 28px auto 20px; }
   .login-hero h1 { max-width: none; }
 }

@@ -44,7 +44,7 @@ Windows Chrome’s native date box showed broken text like **mm/05/yyyy** — on
 Judges will see a **SaaS workspace**, not a sparse landing. Cream + forest green. Yellow **W** on the green mark. No Tessel/Agencee names or photos.
 
 **What changed**
-- **Login** is a split screen (WorkNest, not FlowForge): dark forest-green left panel (yellow W, kicker, headline, honest 403 / 409 card) and a cream **Sign in** form on the right. Demo accounts still use `Password123!`. **http://localhost:5173/?intro=1 always plays the 2-second WorkNest splash**, even with a JWT; after it, logged-in users go to dashboard and logged-out users get the split login.
+- **Login** is a split screen (WorkNest, not FlowForge): dark forest-green left panel (yellow W, kicker, headline, honest 403 / 409 card) and a cream **Sign in** form on the right. The kicker, headline, lede, and server card sit as **one centered group** in that green half (`margin: auto` in a full-height flex column). The yellow **W** stays top-left. Copy and sign-in are unchanged. Demo accounts still use `Password123!`. **http://localhost:5173/?intro=1 always plays the 2-second WorkNest splash**, even with a JWT; after it, logged-in users go to dashboard and logged-out users get the split login.
 - **Profile** fills the leftover cream: **My projects** (name, role, link) from `GET /api/projects`, plus **Assigned to me** tasks from each project’s `tasks?assigneeId=`. Empty states still occupy the pane and offer **Go to projects**. Save name/password still works. No vanity stat tiles.
 - Logged-in chrome: compact light **sidebar** (icon + label, forest-green active pill) plus a **top bar** (page title, project search, avatar, log out). Content fills the main pane with a 16px rhythm. No black sidebar. No huge empty cream field.
 - **Dashboard:** project cards only (no metric tiles). Yellow **W** (`#F4C430`) on the green mark.
@@ -420,6 +420,8 @@ Use two browsers, or one window plus Incognito.
 UI: http://localhost:5173 — API: http://localhost:4000
 
 This machine already has **PostgreSQL 18** (`postgresql-x64-18`) on port **5432**, database **neoboard**, password **postgres**. Migrate + seed already ran.
+
+If Sign in says **Request failed**, the UI is up and the **API is down**. Start `server` again (`npm run dev` on port **4000**). PostgreSQL on 5432 must stay running too.
 
 If the terminals stopped, start them again:
 
