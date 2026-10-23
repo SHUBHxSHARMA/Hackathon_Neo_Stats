@@ -15,10 +15,44 @@ import {
   READERS,
 } from "../middleware/authorize.js";
 
+const PRIORITIES = ["low", "medium", "high"];
+const STATUSES = ["todo", "in_progress", "done"];
+
+function parseDueDate(value) {
+  if (value === undefined) return { skip: true };
+  if (value === null || value === "") return { value: null };
+
+  const text = String(value).trim();
+  const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(text);
+  if (!match) {
+    return { error: "Due date must be a real calendar date." };
+  }
+
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  if (year < 2000 || year > 2100) {
+    return { error: "Due date year must be between 2000 and 2100." };
+  }
+
+  const date = new Date(Date.UTC(year, month - 1, day, 12, 0, 0));
+  if (
+    date.getUTCFullYear() !== year ||
+    date.getUTCMonth() !== month - 1 ||
+    date.getUTCDate() !== day
+  ) {
+    return { error: "Due date must be a real calendar date." };
+  }
+
+  return { value: date };
+}
+
 const createSchema = z.object({
   title: z.string().min(2).max(160),
   description: z.string().max(4000).optional(),
-  status: z.enum(["todo", "in_progress", "done"]).optional(),
+  status: z.enum(STATUSES).optional(),
+  priority: z.enum(PRIORITIES).optional(),
+  dueDate: z.union([z.string(), z.null()]).optional(),
   assigneeId: z.string().uuid().nullable().optional(),
   asProjectManager: z.boolean().optional(),
 });
@@ -27,7 +61,9 @@ const updateSchema = z.object({
   version: z.coerce.number().int().positive(),
   title: z.string().min(2).max(160).optional(),
   description: z.string().max(4000).optional(),
-  status: z.enum(["todo", "in_progress", "done"]).optional(),
+  status: z.enum(STATUSES).optional(),
+  priority: z.enum(PRIORITIES).optional(),
+  dueDate: z.union([z.string(), z.null()]).optional(),
   assigneeId: z.string().uuid().nullable().optional(),
   asProjectManager: z.boolean().optional(),
 });
@@ -128,6 +164,9 @@ projectTaskRouter.post(
     const parsed = createSchema.safeParse(req.body);
     if (!parsed.success) return sendValidation(res, parsed.error.issues);
 
+    const due = parseDueDate(parsed.data.dueDate);
+    if (due.error) return sendError(res, 400, "VALIDATION", due.error);
+
     let assigneeId = parsed.data.assigneeId ?? null;
     if (assigneeId) {
       const resolved = await ensureTaskAssignee(
@@ -148,6 +187,8 @@ projectTaskRouter.post(
         title: parsed.data.title,
         description: parsed.data.description ?? "",
         status: parsed.data.status ?? "todo",
+        priority: parsed.data.priority ?? "medium",
+        dueDate: due.skip ? null : due.value,
         assigneeId,
         createdById: req.user.id,
       },
@@ -187,6 +228,9 @@ taskRouter.patch(
     const parsed = updateSchema.safeParse(req.body);
     if (!parsed.success) return sendValidation(res, parsed.error.issues);
 
+    const due = parseDueDate(parsed.data.dueDate);
+    if (due.error) return sendError(res, 400, "VALIDATION", due.error);
+
     const task = await prisma.task.findUnique({ where: { id: req.params.id } });
     if (!task) return sendError(res, 404, "NOT_FOUND", "Task not found.");
 
@@ -224,6 +268,8 @@ taskRouter.patch(
       if (parsed.data.title !== undefined) data.title = parsed.data.title;
       if (parsed.data.description !== undefined) data.description = parsed.data.description;
       if (parsed.data.status !== undefined) data.status = parsed.data.status;
+      if (parsed.data.priority !== undefined) data.priority = parsed.data.priority;
+      if (!due.skip) data.dueDate = due.value;
       if (parsed.data.assigneeId !== undefined) data.assigneeId = parsed.data.assigneeId;
 
       const result = await prisma.task.updateMany({

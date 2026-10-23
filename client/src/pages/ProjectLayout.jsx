@@ -1,11 +1,13 @@
 import { useEffect, useState } from "react";
 import { NavLink, Outlet, useParams } from "react-router-dom";
 import { api } from "../api.js";
+import { roleLabel, usePageTitle } from "../workspace.jsx";
 
 export default function ProjectLayout() {
   const { id } = useParams();
   const [project, setProject] = useState(null);
   const [error, setError] = useState("");
+  usePageTitle(project?.name || "Project");
 
   useEffect(() => {
     api(`/api/projects/${id}`)
@@ -14,16 +16,16 @@ export default function ProjectLayout() {
   }, [id]);
 
   if (error) return <div className="banner error">{error}</div>;
-  if (!project) return <p>Loading project…</p>;
+  if (!project) return <p className="loading-line">Loading project…</p>;
 
   return (
-    <div>
+    <div className="page">
       <div className="page-head">
         <div>
           <h1>{project.name}</h1>
           <p>{project.description}</p>
         </div>
-        <span className={`chip ${project.myRole}`}>{project.myRole}</span>
+        <span className={`chip ${project.myRole}`}>{roleLabel(project.myRole)}</span>
       </div>
       <div className="tabs">
         <NavLink to={`/projects/${id}`} end>

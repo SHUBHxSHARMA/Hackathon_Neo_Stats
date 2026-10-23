@@ -47,6 +47,8 @@ export function publicTask(task) {
     title: task.title,
     description: task.description,
     status: task.status,
+    priority: task.priority,
+    dueDate: task.dueDate,
     version: task.version,
     assigneeId: task.assigneeId,
     createdById: task.createdById,

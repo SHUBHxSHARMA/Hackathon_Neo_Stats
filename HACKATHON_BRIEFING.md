@@ -1,7 +1,7 @@
 # Hackathon briefing — WorkNest
 BY NeoStats
 
-Keep this tab open. This is the **judge study sheet**. The product is **runnable locally**. PostgreSQL 18 is up, database `neoboard` is migrated and seeded, API is on `:4000`, UI is on `:5173`. Login as admin was verified.
+Keep this tab open. This is the **judge study sheet**. The product is **runnable locally**. PostgreSQL 18 is up, database `neoboard` is migrated and seeded, API is on `:4000`, UI is on `:5173`. The whole app is **cream + forest green**: 2-second splash, then login, then a light sidebar workspace.
 
 ---
 
@@ -11,7 +11,41 @@ WorkNest, by NeoStats, is a local collaborative project manager. Four roles shar
 
 ---
 
-## Users and roles (this step — verified)
+## Workspace UI (this step — wait)
+
+Judges will see a **SaaS workspace**, not a sparse landing. Cream + forest green. Yellow **W** on the green mark. No Tessel/Agencee names or photos.
+
+**What changed**
+- **Login** is a split screen (WorkNest, not FlowForge): dark forest-green left panel (yellow W, kicker, headline, honest 403 / 409 card) and a cream **Sign in** form on the right. Demo accounts still use `Password123!`. Splash at `/?intro=1` is unchanged.
+- **Profile** fills the leftover cream: **My projects** (name, role, link) from `GET /api/projects`, plus **Assigned to me** tasks from each project’s `tasks?assigneeId=`. Empty states still occupy the pane and offer **Go to projects**. Save name/password still works. No vanity stat tiles.
+- Logged-in chrome: compact light **sidebar** (icon + label, forest-green active pill) plus a **top bar** (page title, project search, avatar, log out). Content fills the main pane with a 16px rhythm. No black sidebar. No huge empty cream field.
+- **Dashboard:** project cards only (no metric tiles). Yellow **W** (`#F4C430`) on the green mark.
+- **Projects / Users / Team:** dense tables. **New project**, **Create user**, and **Add member** open modals.
+- **New task** is a real modal: title, description, status, priority, assignee, due date. Prisma stores `priority` (low/medium/high) and `due_date`. Express Zod accepts them. PATCH still needs `version` (409 unchanged).
+- Motion: splash fade, login card slide-up, page fade, card hover lift, modal backdrop + scale. Honors `prefers-reduced-motion`.
+
+**Where it lives**
+- `client/src/pages/Login.jsx` — split-screen sign-in
+- `client/src/pages/Profile.jsx` — identity form + my projects + assigned tasks
+- `client/src/App.jsx` — sidebar + top bar shell
+- `client/src/styles.css` — workspace layout, yellow W, motion, login split
+- `client/src/pages/ProjectTasks.jsx` — task table + New task modal
+- `server/prisma/schema.prisma` — `TaskPriority`, `dueDate`
+- `server/src/routes/tasks.js` — create/update fields
+
+**How to demo**
+1. http://localhost:5173/?intro=1 — splash (yellow W), then login.
+2. `admin@local.test` / `Password123!`.
+3. Dashboard stats + projects. Open **Website relaunch → Tasks → New task**. Set High + a 2026 due date. Create. Open the row. Save still sends version.
+4. Do **not** delete Website relaunch or Draft landing page copy.
+
+**Judge line:** “The app is a cream and forest-green workspace: sidebar plus top bar, dense pages. New tasks get real priority and due date in Postgres. Roles and 409 still live on the server.”
+
+**Please look at splash, login, dashboard, projects, Website relaunch (Overview / Tasks / Team), a task, users, and profile. Check the yellow W and that pages feel filled. When it looks right, say so and we continue.**
+
+---
+
+## Users and roles (verified)
 
 Admin is **global** (`users.global_role`). PM / Team Member / Viewer are **per project** (`project_members.role`). Hiding a button is only UX — Postman still gets **403**.
 
@@ -42,16 +76,23 @@ Same person can be PM on project A and viewer on project B.
 | Assign tasks | Done | Assignee dropdown (PM/Admin only). |
 | Change task status | Done | Status on the task page. |
 
-**Team Member** (`member@local.test`)
+**Team Member** (`member@local.test`) — **rechecked exactly**
 
-| Responsibility | Status | How to demo |
-| --- | --- | --- |
-| View projects they belong to | Done | Dashboard shows Website relaunch only. |
-| View assigned tasks | Done | Open “Draft landing page copy”. |
-| Update their tasks | Done | Open a task in a project they belong to. Save title/description. |
-| Add comments | Done | Comment box on the task. Viewer cannot. |
-| Change task status | Done | Status dropdown on the task page, then Save. |
-| Cannot manage team | Done | No Add/Remove on Team. API 403. |
+On **Website relaunch** this account is `team_member` and owns **Draft landing page copy**. GET `/api/projects` also returns **Data cleanup sprint** (they belong there too). Not Mobile app beta or Campus hiring drive.
+
+| Capability | API | UI | Exact / not |
+| --- | --- | --- | --- |
+| View projects they belong to | 200, 2 memberships only | Dashboard “Projects you belong to”: Website relaunch + Data cleanup sprint. No Users nav. | Exact |
+| View assigned tasks | 200 GET task + `tasks?assigneeId=` | Profile **Assigned to me** and Tasks tab open “Draft landing page copy” | Exact |
+| Update their tasks | PATCH own task + `version` → 200 | Title/description enabled. Save (sends version). | Exact. Extra: can also edit other tasks in the same project (not assigned-only). |
+| Add comments | POST comment → 201 | Comment box + Add comment. | Exact |
+| Change task status | PATCH `status` + `version` → 200 | Status dropdown, Save. Restored to In progress after the check. | Exact |
+| Cannot create/delete project, manage members, create/delete task | 403 | No New project / Add member / New task / task Delete | Exact |
+| Viewer comments stay read-only | Viewer POST → 403 | Viewer: fields disabled, “Viewers cannot comment.”, no Add comment | Exact |
+
+**Extra (kept):** Team Members can PATCH any task in a project they belong to, not only assigned ones. Spec still holds because they **can** update their tasks. We did **not** tighten this to assigned-only.
+
+**Judge line:** “A Team Member sees only their projects, updates their tasks, changes status, and comments. Create/delete project, manage team, and create/delete task still 403. Viewers still cannot comment.”
 
 **Viewer** (`viewer@local.test`)
 
@@ -95,8 +136,10 @@ Other choices: **Prisma** (schema file), **JWT + bcrypt** (login), **Docker-comp
 client/                      React UI (port 5173)
   src/api.js                 fetch helper + JWT header
   src/auth.jsx               who is logged in; role helpers
-  src/App.jsx                routes (Login, Dashboard, Projects, Task, Users, Profile)
-  src/pages/                 one screen per file
+  src/App.jsx                routes + light sidebar shell
+  src/pages/Intro.jsx        2-second WorkNest splash
+  src/pages/                 one screen per file (no public landing)
+  src/styles.css             cream + forest-green look for every page
 server/                      Express API (port 4000)
   src/index.js               health check + mounts all routes
   src/middleware/auth.js     login required + admin check
@@ -123,7 +166,7 @@ Open `server/prisma/schema.prisma`. **Six tables** in Postgres `neoboard`, match
 | roles | `roles` | Fixed now | id, unique `name`, `scope` global\|project |
 | projects | `projects` | Done | name, description, `status` active\|archived, `created_by` |
 | project_members | `project_members` | Done | user + project + `role_id` FK; **unique (project_id, user_id)** |
-| tasks | `tasks` | Done | title, `status`, `assignee_id`, `created_by`, **`version`** |
+| tasks | `tasks` | This step | title, `status`, **`priority`**, **`due_date`**, `assignee_id`, `created_by`, **`version`** |
 | comments | `comments` | Done | `task_id`, `user_id`, body |
 
 **Relations (all present):** project → members, tasks; task → comments, assignee, creator; member → user + project; comment → task + user. Delete a project **cascades** members, tasks, comments.
@@ -207,13 +250,14 @@ UI (`TaskDetail.jsx`): Save sends `version`. 409 shows a banner and **Reload lat
 
 ---
 
-## Pages (this step — verified)
+## Pages (verified)
 
-All required screens exist and load real data. Extra: `/profile` (ours — keep it).
+All required screens exist and load real data. Extra: `/profile` (ours — keep it). A public landing was tried and **removed**.
 
 | URL | Status | What it shows | Who can open it |
 | --- | --- | --- | --- |
-| `/login` | Done | WorkNest sign-in. Demo accounts listed. | Anyone (logged-in users bounce to dashboard) |
+| `/` | This step | 2-second WorkNest BY NeoStats splash, then `/login`. Replay: `/?intro=1` | Anyone. Logged-in users skip to dashboard |
+| `/login` | This step | Split screen: forest left + cream sign-in. Demo accounts listed. | Anyone (logged-in users bounce to dashboard) |
 | `/dashboard` | Done | Hello + project cards | Any logged-in user (Admin sees all projects) |
 | `/projects` | Done | Project list. Admin: create, archive, delete | Any logged-in user (list is membership-filtered) |
 | `/projects/:id` | Done | Overview: name, role, edit details | Members of that project, plus Admin |
@@ -221,9 +265,9 @@ All required screens exist and load real data. Extra: `/profile` (ours — keep 
 | `/projects/:id/team` | Done | Members table. Admin/PM: add/remove (Admin assigns PMs) | Same as overview |
 | `/tasks/:id` | Done | Task edit, status, comments, 409 banner | Same as overview |
 | `/users` | Done | User directory + create / **edit** / deactivate | **Admin only.** Others are redirected to `/dashboard`. Nav link hidden. |
-| `/profile` | Extra (keep) | Name and password | Any logged-in user |
+| `/profile` | Extra (keep) | Name/password plus my projects and assigned tasks | Any logged-in user |
 
-**Judge line:** “Users is Admin only in the sidebar **and** in the route guard. A PM who types `/users` still lands on dashboard.”
+**Judge line:** “Users is Admin only in the **left sidebar** and in the route guard. A PM who types `/users` still lands on dashboard.”
 
 ---
 
@@ -249,7 +293,7 @@ Login issues a **JWT**. Protected routes call `requireAuth`. Role checks run in 
 | Member `POST` member | 403 | 403 | Done |
 | Member `POST` task | 403 | 403 | Done |
 | Member `DELETE` task | 403 | 403 | Done |
-| Member `PATCH` someone else’s task | 403 | 403 | Done |
+| Member `PATCH` someone else’s task in the same project | Extra 200 (not assigned-only) | 200 | Extra (kept) |
 | Viewer `POST` comment | 403 | 403 | Done |
 | Member `GET` their projects | 200 | 200 | Done |
 | Member `PATCH` own assigned task + version | 200 | 200 | Done |
@@ -257,7 +301,7 @@ Login issues a **JWT**. Protected routes call `requireAuth`. Role checks run in 
 | Admin `GET /api/users` | 200 | 200 | Done |
 | Member `GET /api/users` | 403 | 403 | Done |
 
-**Missing:** none. **Fixed now:** none (all already blocked). Extra: PM assigning `project_manager` → 403 Admin only.
+**Missing:** none. **Fixed now:** none (all five Team Member bullets already worked). Extra: members can edit any task in a project they belong to; PM assigning `project_manager` → 403 Admin only.
 
 ### Postman demo (practice)
 
@@ -287,7 +331,7 @@ Every verb is a real Express route. Buttons call those routes. Postman without a
 | Team | add | Done | `POST /api/projects/:id/members` | Team → Add member |
 | Team | remove | Done | `DELETE /api/projects/:id/members/:userId` | Team → Remove |
 | Team | change role | Done | `PATCH /api/projects/:id/members/:userId` | Team role dropdown (Admin assigns PM) |
-| Tasks | create | Done | `POST /api/projects/:id/tasks` | Tasks → New task |
+| Tasks | create | This step | `POST /api/projects/:id/tasks` | Tasks → **New task** modal (status, priority, assignee, due date) |
 | Tasks | read | Done | `GET /api/projects/:id/tasks`, `GET /api/tasks/:id` | Tasks list, task page |
 | Tasks | update | Done | `PATCH /api/tasks/:id` (send `version`) | Task page Save |
 | Tasks | delete | Done | `DELETE /api/tasks/:id` | Task page Delete (PM/Admin) |
@@ -374,13 +418,17 @@ npm run prisma:seed
 postgresql://postgres:postgres@localhost:5432/neoboard?schema=public&connect_timeout=5
 ```
 
-Open http://localhost:5173 — login is pre-filled with the admin demo account.
+Refresh http://localhost:5173 — 2-second splash, then the cream login. Admin is pre-filled: `admin@local.test` / `Password123!`. Replay splash: http://localhost:5173/?intro=1
 
 ---
 
 ## What is done vs later
 
-**Done:** React pages, Express APIs, JWT + bcrypt, Prisma schema, migrate, seed, role 403s, task `version` + 409 UI, comments. Health is `database: "connected"`. Admin login and dashboard verified (Website relaunch, Users list).
+**Done:** React pages, Express APIs, JWT + bcrypt, Prisma schema, migrate, seed, role 403s, task `version` + 409 UI, comments. Dark-orange landing and black sidebar removed.
+
+**This step:** SaaS workspace chrome (sidebar + top bar), dense pages, yellow W, New task modal with real `priority` + `dueDate`, short motion.
+
+**Waiting on you:** Check splash, login, dashboard, projects, Website relaunch, task detail, users, profile. Then say if we should continue.
 
 **Not in this build:** cloud deploy, live WebSockets, file uploads, email.
 
@@ -405,3 +453,5 @@ Open http://localhost:5173 — login is pre-filled with the admin demo account.
 **Where is the database?** This laptop. Windows PostgreSQL 18. No Firebase.
 
 **What next if you had time?** Live updates, activity log, attachments.
+
+**Why no public landing?** Dark-orange marketing page was rejected. `/` is a 2-second WorkNest splash, then login.

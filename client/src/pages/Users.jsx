@@ -1,37 +1,56 @@
 import { useEffect, useState } from "react";
 import { api } from "../api.js";
 import { useAuth } from "../auth.jsx";
+import { Avatar, roleLabel, usePageTitle } from "../workspace.jsx";
+
+const emptyCreate = { name: "", email: "", password: "Password123!", globalRole: "user" };
 
 export default function Users() {
   const { user } = useAuth();
+  usePageTitle("Users");
   const [users, setUsers] = useState([]);
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("Password123!");
-  const [globalRole, setGlobalRole] = useState("user");
+  const [createForm, setCreateForm] = useState(emptyCreate);
   const [editing, setEditing] = useState(null);
   const [editName, setEditName] = useState("");
   const [editEmail, setEditEmail] = useState("");
   const [editPassword, setEditPassword] = useState("");
   const [editRole, setEditRole] = useState("user");
+  const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   async function load() {
     const data = await api("/api/users?limit=50");
     setUsers(data.items);
+    setLoading(false);
   }
 
   useEffect(() => {
-    load().catch((err) => setError(err.message));
+    load().catch((err) => {
+      setError(err.message);
+      setLoading(false);
+    });
   }, []);
+
+  useEffect(() => {
+    if (!open && !editing) return undefined;
+    function onKey(event) {
+      if (event.key === "Escape") {
+        setOpen(false);
+        setEditing(null);
+      }
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open, editing]);
 
   async function create(event) {
     event.preventDefault();
     setError("");
     try {
-      await api("/api/users", { method: "POST", body: { name, email, password, globalRole } });
-      setName("");
-      setEmail("");
+      await api("/api/users", { method: "POST", body: createForm });
+      setCreateForm(emptyCreate);
+      setOpen(false);
       await load();
     } catch (err) {
       setError(err.message);
@@ -60,6 +79,7 @@ export default function Users() {
 
   function startEdit(person) {
     setError("");
+    setOpen(false);
     setEditing(person);
     setEditName(person.name);
     setEditEmail(person.email);
@@ -83,23 +103,31 @@ export default function Users() {
   }
 
   return (
-    <div>
-      <div className="page-head">
-        <div>
-          <h1>Users</h1>
-          <p>
-            Admin only. Global role here is <b>admin</b> or <b>user</b>. To make someone a
-            project manager, open a project → <b>Team</b> and set their project role.
-          </p>
-        </div>
+    <div className="page">
+      <div className="toolbar">
+        <p className="muted" style={{ margin: 0 }}>
+          Admin only. Global role is admin or user. Project manager is set on a project Team tab.
+        </p>
+        <button
+          className="btn teal"
+          type="button"
+          onClick={() => {
+            setError("");
+            setEditing(null);
+            setOpen(true);
+          }}
+        >
+          Create user
+        </button>
       </div>
-      {error && <div className="banner error">{error}</div>}
-      <div className="grid two">
-        <div className="card">
+      {error && !open && !editing && <div className="banner error">{error}</div>}
+      {loading && <p className="loading-line">Loading people…</p>}
+      <div className="card" style={{ padding: 0 }}>
+        <div className="table-wrap">
           <table>
             <thead>
               <tr>
-                <th>Name</th>
+                <th>Person</th>
                 <th>Role</th>
                 <th>Status</th>
                 <th></th>
@@ -109,11 +137,16 @@ export default function Users() {
               {users.map((person) => (
                 <tr key={person.id}>
                   <td>
-                    {person.name}
-                    <div className="muted">{person.email}</div>
+                    <span className="person">
+                      <Avatar name={person.name} />
+                      <span className="meta">
+                        <b>{person.name}</b>
+                        <span className="muted">{person.email}</span>
+                      </span>
+                    </span>
                   </td>
                   <td>
-                    <span className={`chip ${person.globalRole}`}>{person.globalRole}</span>
+                    <span className={`chip ${person.globalRole}`}>{roleLabel(person.globalRole)}</span>
                   </td>
                   <td>{person.isActive ? "active" : "deactivated"}</td>
                   <td>
@@ -122,7 +155,7 @@ export default function Users() {
                         Edit
                       </button>
                       {person.isActive && person.id !== user.id && (
-                        <button className="btn ghost" onClick={() => deactivate(person.id)}>
+                        <button className="btn ghost" type="button" onClick={() => deactivate(person.id)}>
                           Deactivate
                         </button>
                       )}
@@ -138,9 +171,79 @@ export default function Users() {
             </tbody>
           </table>
         </div>
-        {editing ? (
-          <form className="card grid" onSubmit={saveEdit}>
-            <h3>Edit {editing.name}</h3>
+      </div>
+
+      {open && (
+        <div className="modal-backdrop" onClick={() => setOpen(false)}>
+          <form className="modal grid" onClick={(event) => event.stopPropagation()} onSubmit={create}>
+            <div className="modal-head">
+              <div>
+                <h2>Create user</h2>
+                <p className="muted">No public signup. Admin creates accounts here.</p>
+              </div>
+              <button className="modal-close" type="button" onClick={() => setOpen(false)} aria-label="Close">
+                ×
+              </button>
+            </div>
+            {error && <div className="banner error">{error}</div>}
+            <label>
+              Name
+              <input
+                value={createForm.name}
+                onChange={(e) => setCreateForm({ ...createForm, name: e.target.value })}
+                required
+                autoFocus
+              />
+            </label>
+            <label>
+              Email
+              <input
+                value={createForm.email}
+                onChange={(e) => setCreateForm({ ...createForm, email: e.target.value })}
+                required
+              />
+            </label>
+            <label>
+              Password
+              <input
+                value={createForm.password}
+                onChange={(e) => setCreateForm({ ...createForm, password: e.target.value })}
+                required
+              />
+            </label>
+            <label>
+              Global role
+              <select
+                value={createForm.globalRole}
+                onChange={(e) => setCreateForm({ ...createForm, globalRole: e.target.value })}
+              >
+                <option value="user">user</option>
+                <option value="admin">admin</option>
+              </select>
+            </label>
+            <div className="modal-actions">
+              <button className="btn ghost" type="button" onClick={() => setOpen(false)}>
+                Cancel
+              </button>
+              <button className="btn teal">Create</button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {editing && (
+        <div className="modal-backdrop" onClick={() => setEditing(null)}>
+          <form className="modal grid" onClick={(event) => event.stopPropagation()} onSubmit={saveEdit}>
+            <div className="modal-head">
+              <div>
+                <h2>Edit {editing.name}</h2>
+                <p className="muted">Leave password blank to keep the current one.</p>
+              </div>
+              <button className="modal-close" type="button" onClick={() => setEditing(null)} aria-label="Close">
+                ×
+              </button>
+            </div>
+            {error && <div className="banner error">{error}</div>}
             <label>
               Name
               <input value={editName} onChange={(e) => setEditName(e.target.value)} required />
@@ -168,39 +271,15 @@ export default function Users() {
                 <option value="admin">admin</option>
               </select>
             </label>
-            <div className="row">
-              <button className="btn teal">Save</button>
+            <div className="modal-actions">
               <button className="btn ghost" type="button" onClick={() => setEditing(null)}>
                 Cancel
               </button>
+              <button className="btn teal">Save</button>
             </div>
           </form>
-        ) : (
-        <form className="card grid" onSubmit={create}>
-          <h3>Create user</h3>
-          <label>
-            Name
-            <input value={name} onChange={(e) => setName(e.target.value)} required />
-          </label>
-          <label>
-            Email
-            <input value={email} onChange={(e) => setEmail(e.target.value)} required />
-          </label>
-          <label>
-            Password
-            <input value={password} onChange={(e) => setPassword(e.target.value)} required />
-          </label>
-          <label>
-            Global role
-            <select value={globalRole} onChange={(e) => setGlobalRole(e.target.value)}>
-              <option value="user">user</option>
-              <option value="admin">admin</option>
-            </select>
-          </label>
-          <button className="btn teal">Create</button>
-        </form>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }

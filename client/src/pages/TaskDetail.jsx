@@ -2,6 +2,18 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { api, ApiError } from "../api.js";
 import { canManageProject, canWrite, useAuth } from "../auth.jsx";
+import { Avatar, usePageTitle } from "../workspace.jsx";
+import {
+  DATE_MAX,
+  DATE_MIN,
+  PRIORITY_OPTIONS,
+  STATUS_OPTIONS,
+  dueDateInputValue,
+  formatDueDate,
+  priorityLabel,
+  sanitizeDueDate,
+  statusLabel,
+} from "../taskDisplay.js";
 
 export default function TaskDetail() {
   const { id } = useParams();
@@ -13,6 +25,8 @@ export default function TaskDetail() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [status, setStatus] = useState("todo");
+  const [priority, setPriority] = useState("medium");
+  const [dueDate, setDueDate] = useState("");
   const [assigneeId, setAssigneeId] = useState("");
   const [members, setMembers] = useState([]);
   const [directory, setDirectory] = useState([]);
@@ -28,6 +42,8 @@ export default function TaskDetail() {
     setTitle(next.title);
     setDescription(next.description);
     setStatus(next.status);
+    setPriority(next.priority || "medium");
+    setDueDate(dueDateInputValue(next.dueDate));
     setAssigneeId(next.assigneeId || "");
     const [commentData, projectData, memberData, dir] = await Promise.all([
       api(`/api/tasks/${id}/comments?limit=50`),
@@ -58,7 +74,14 @@ export default function TaskDetail() {
     setError("");
     setConflict(null);
     try {
-      const payload = { version: task.version, title, description, status };
+      const payload = {
+        version: task.version,
+        title,
+        description,
+        status,
+        priority,
+        dueDate: dueDate || null,
+      };
       if (manager) payload.assigneeId = assigneeId || null;
       if (isAdmin && assigneeId) payload.asProjectManager = true;
       const data = await api(`/api/tasks/${id}`, { method: "PATCH", body: payload });
@@ -66,6 +89,8 @@ export default function TaskDetail() {
       setTitle(data.task.title);
       setDescription(data.task.description);
       setStatus(data.task.status);
+      setPriority(data.task.priority || "medium");
+      setDueDate(dueDateInputValue(data.task.dueDate));
       setAssigneeId(data.task.assigneeId || "");
       await load();
     } catch (err) {
@@ -109,10 +134,12 @@ export default function TaskDetail() {
     }
   }
 
-  if (!task) return error ? <div className="banner error">{error}</div> : <p>Loading task…</p>;
+  usePageTitle(task?.title || "Task");
+
+  if (!task) return error ? <div className="banner error">{error}</div> : <p className="loading-line">Loading task…</p>;
 
   return (
-    <div>
+    <div className="page">
       <p className="muted">
         <Link to={`/projects/${task.projectId}/tasks`}>Back to tasks</Link>
       </p>
@@ -121,9 +148,15 @@ export default function TaskDetail() {
           <h1>{task.title}</h1>
           <p>
             Version {task.version} · {task.assignee?.name || "Unassigned"}
+            {task.dueDate ? ` · due ${formatDueDate(task.dueDate)}` : ""}
           </p>
         </div>
-        <span className={`chip ${task.status}`}>{task.status.replace("_", " ")}</span>
+        <div className="row">
+          <span className={`chip priority-${task.priority || "medium"}`}>
+            {priorityLabel(task.priority)}
+          </span>
+          <span className={`chip ${task.status}`}>{statusLabel(task.status)}</span>
+        </div>
       </div>
       {error && <div className={`banner ${conflict ? "" : "error"}`}>{error}</div>}
       {conflict && (
@@ -148,7 +181,7 @@ export default function TaskDetail() {
           </div>
         </div>
       )}
-      <div className="grid two">
+      <div className="grid split">
         <form className="card grid" onSubmit={save}>
           <h3>Task</h3>
           <label>
@@ -162,10 +195,33 @@ export default function TaskDetail() {
           <label>
             Status
             <select value={status} onChange={(e) => setStatus(e.target.value)} disabled={!canEdit}>
-              <option value="todo">todo</option>
-              <option value="in_progress">in_progress</option>
-              <option value="done">done</option>
+              {STATUS_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
             </select>
+          </label>
+          <label>
+            Priority
+            <select value={priority} onChange={(e) => setPriority(e.target.value)} disabled={!canEdit}>
+              {PRIORITY_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            Due date
+            <input
+              type="date"
+              min={DATE_MIN}
+              max={DATE_MAX}
+              value={dueDate}
+              onChange={(e) => setDueDate(sanitizeDueDate(e.target.value))}
+              disabled={!canEdit}
+            />
           </label>
           {manager && (
             <label>
@@ -207,9 +263,14 @@ export default function TaskDetail() {
         <div className="card grid">
           <h3>Comments</h3>
           {comments.map((item) => (
-            <div key={item.id}>
-              <b>{item.user?.name}</b>
-              <p className="muted">{new Date(item.createdAt).toLocaleString()}</p>
+            <div className="comment" key={item.id}>
+              <div className="person">
+                <Avatar name={item.user?.name} />
+                <span className="meta">
+                  <b>{item.user?.name}</b>
+                  <span className="muted">{new Date(item.createdAt).toLocaleString()}</span>
+                </span>
+              </div>
               <p>{item.body}</p>
               {(item.userId === user.id || manager) && (
                 <button className="btn ghost" type="button" onClick={() => deleteComment(item.id)}>
